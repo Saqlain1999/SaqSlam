@@ -3,3 +3,6 @@ Uses sdl2 to display video
 Uses feature extractor detection using cv2.goodFeatureToTrack
 Matches features using cv2.bfMatcher and cv2.knnMatch
 Filteration using skimage, ransac and FundamentalMatrixTransform
+
+* Requires a video to run SLAM on, this implementaiton is just for learning this is a python based SLAM so it isn't efficient
+* Just change the videoFromDir var in slam.py file, currently using a car driving video
