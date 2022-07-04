@@ -13,7 +13,8 @@ videoFromDir = './video2.mp4'
 W = 1920//2
 H = 1080//2
 
-F = 1
+# F = 490
+F = 270
 # Creating a object of display class, it actually tas frames from video and makes it viewable using Sdl2
 display = Display(W,H)
 
@@ -26,10 +27,13 @@ fe = FeatureExtractor(K)
 
 def process_frame(img):
     img = cv2.resize(img, (W,H))
-    matches = fe.extract(img)
+    matches, pose = fe.extract(img)
     
-    print("%d matches" % (len(matches)))
+    if pose is None:
+        return
 
+    print("%d matches" % (len(matches)))
+    print(pose)
     for pt1, pt2 in matches:
             u1,v1 = fe.denormalize(pt1)
             u2,v2 = fe.denormalize(pt2)
