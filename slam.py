@@ -4,44 +4,39 @@ import time
 import cv2
 import numpy as np
 from display import Display
-from featureExtractor import FeatureExtractor
+from frame import denormalize, Frame, match
+import g2o
 
 # Video:
 videoFromDir = './video2.mp4'
 
-# Screen Size
-W = 1920//2
-H = 1080//2
-
-# F = 490
-F = 270
 # Creating a object of display class, it actually tas frames from video and makes it viewable using Sdl2
-display = Display(W,H)
-
-K = np.array(([F,0,W//2],[0,F,H//2],[0,0,1]))
 
 # Feature Extractor Class returns good features to track using cv2.ORB, it's method extract takes image as a parameter (the same one from display class)
-fe = FeatureExtractor(K)
+# Camera
+W = 1920//2
+H = 1080//2
+F = 270
+K = np.array(([F,0,W//2],[0,F,H//2],[0,0,1]))
 
+# main classes
+display = Display(W,H)
+# fe = FeatureExtractor()
 
-
+frames = []
 def process_frame(img):
     img = cv2.resize(img, (W,H))
-    matches, pose = fe.extract(img)
-    
-    if pose is None:
+    frame = Frame(img, K)
+    frames.append(frame)
+    if len(frames) <= 1:
         return
+    ret, Rt = match(frames[-1], frames[-2])
 
-    print("%d matches" % (len(matches)))
-    print(pose)
-    for pt1, pt2 in matches:
-            u1,v1 = fe.denormalize(pt1)
-            u2,v2 = fe.denormalize(pt2)
-
-
-            cv2.circle(img, (u1, v1), color=(0,255,0),radius=3)
-            cv2.line(img, (u1, v1), (u2,v2), color=(255,0,0))
-    
+    for pt1,pt2 in ret:
+        u1,v1 = denormalize(K, pt1)
+        u2,v2 = denormalize(K, pt2)
+        cv2.circle(img, (u1, v1), color=(0,255,0),radius=3)
+        cv2.line(img, (u1, v1), (u2,v2), color=(255,0,0))
     display.show(img)
 
 if __name__ == "__main__":
