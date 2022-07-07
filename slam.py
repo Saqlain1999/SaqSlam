@@ -56,6 +56,7 @@ class Map(object):
             -640.0 / 480.0,
         )
             .SetHandler(self.handler))
+    def viewer_refresh(self, q):
         darr = None
         if darr is None or not q.empty():
             darr = q.get(True)
@@ -71,7 +72,6 @@ class Map(object):
         gl.glColor3f(1.0, 0.0, 0.0)
         pango.glDrawPoints([d[:3] for d in darr[1]])
         pango.FinishFrame()
-    # def viewer_refresh(self, q):
         # for d in darr[1]:
             # pango.glDrawPoints(d, dtype=np.float64)
         # pango.glDrawPoints(dtype=np.float64, data=(d for d in darr[1]))
@@ -87,7 +87,7 @@ class Map(object):
         for p in self.points:
             pts.append(p.pt)
         self.q.put((poses, pts))
-        self.viewer_thread(self.q)
+        self.viewer_refresh(self.q)
 
 # main classes
 display = Display(W,H)
