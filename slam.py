@@ -6,6 +6,11 @@ import numpy as np
 from display import Display
 from frame import denormalize, Frame, match_frames, IRt
 import g2o
+from multiprocessing import Process, Queue
+import pypangolin as pango
+import OpenGL.GL as gl 
+np.set_printoptions(suppress=True)
+
 
 # Video:
 videoFromDir = './video2.mp4'
@@ -23,14 +28,66 @@ class Map(object):
     def __init__(self):
         self.frames = []
         self.points = []
-    
+
+        # create viewer process
+        self.q = Queue()
+        self.viewer = Process(target=self.viewer_thread, args=(self.q,))
+        self.viewer.Daemon = True
+        self.viewer.start()
+
+
+    def viewer_thread(self, q):
+        pango.CreateWindowAndBind("ZlykhSLAM", 640, 480)
+        gl.glEnable(gl.GL_DEPTH_TEST)
+        
+        self.scam = pango.OpenGlRenderState(
+            pango.ProjectionMatrix(640, 480, 420, 420, 320, 240, 0.2, 100),
+            pango.ModelViewLookAt(-2, 2, -2, 0, 0, 0, pango.AxisY))
+
+        self.handler = pango.Handler3D(self.scam)
+
+        self.dcam = (
+            pango.CreateDisplay()
+            .SetBounds(
+            pango.Attach(0),
+            pango.Attach(1),
+            pango.Attach.Pix(0),
+            pango.Attach(1),
+            -640.0 / 480.0,
+        )
+            .SetHandler(self.handler))
+        darr = None
+        if darr is None or not q.empty():
+            darr = q.get(True)
+
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+        gl.glClearColor(1.0, 1.0, 1.0, 1.0)
+        self.dcam.Activate(self.scam)
+        gl.glPointSize(10)
+        gl.glColor3f(0.0, 1.0, 0.0)
+        pango.glDrawPoints([d[:3, 1] for d in darr[0]])
+
+        gl.glPointSize(2)
+        gl.glColor3f(1.0, 0.0, 0.0)
+        pango.glDrawPoints([d[:3] for d in darr[1]])
+        pango.FinishFrame()
+    # def viewer_refresh(self, q):
+        # for d in darr[1]:
+            # pango.glDrawPoints(d, dtype=np.float64)
+        # pango.glDrawPoints(dtype=np.float64, data=(d for d in darr[1]))
+
+        # pango glDrawPoints
+        
+
+
     def display(self):
+        poses, pts = [], []
         for f in self.frames:
-            print(f.id)
-            print(f.pose)
-            print()
-        # for p in points:
-        #     print(p.xyz)
+            poses.append(f.pose)
+        for p in self.points:
+            pts.append(p.pt)
+        self.q.put((poses, pts))
+        self.viewer_thread(self.q)
 
 # main classes
 display = Display(W,H)
@@ -45,7 +102,7 @@ class Point(object):
     # Each point is observed in multiple Frames
 
     def __init__(self, mapp, loc):
-        self.xyz = loc
+        self.pt = loc
         self.frames = []
         self.idxs = []
         
