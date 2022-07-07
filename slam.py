@@ -6,9 +6,10 @@ import numpy as np
 from display import Display
 from frame import denormalize, Frame, match_frames, IRt
 import g2o
-from multiprocessing import Process, Queue
 import pypangolin as pango
 import OpenGL.GL as gl 
+from multiprocessing import Process, Queue
+
 np.set_printoptions(suppress=True)
 
 
@@ -23,26 +24,34 @@ W = 1920//2
 H = 1080//2
 F = 270
 K = np.array(([F,0,W//2],[0,F,H//2],[0,0,1]))
+Kinv = np.linalg.inv(K)
+
 
 class Map(object):
     def __init__(self):
         self.frames = []
         self.points = []
-
-        # create viewer process
+        self.state = None
         self.q = Queue()
-        self.viewer = Process(target=self.viewer_thread, args=(self.q,))
-        self.viewer.Daemon = True
-        self.viewer.start()
-
+        
+        p = Process(target=self.viewer_thread, args=(self.q,))
+        p.daemon = True
+        p.start()
 
     def viewer_thread(self, q):
-        pango.CreateWindowAndBind("ZlykhSLAM", 640, 480)
+        self.viewer_init(1024, 768)
+        while 1:
+            self.viewer_refresh(q)
+
+    def viewer_init(self, w, h):
+        pango.CreateWindowAndBind("ZlykhSLAM", w, h)
         gl.glEnable(gl.GL_DEPTH_TEST)
         
         self.scam = pango.OpenGlRenderState(
-            pango.ProjectionMatrix(640, 480, 420, 420, 320, 240, 0.2, 100),
-            pango.ModelViewLookAt(-2, 2, -2, 0, 0, 0, pango.AxisY))
+            pango.ProjectionMatrix(w, h, 420, 420, w//2, h//2, 0.2, 1000),
+            pango.ModelViewLookAt(0, -5, -8,
+                                  0, 0, 0,
+                                  0, -1, 0))
 
         self.handler = pango.Handler3D(self.scam)
 
@@ -51,32 +60,34 @@ class Map(object):
             .SetBounds(
             pango.Attach(0),
             pango.Attach(1),
-            pango.Attach.Pix(0),
+            pango.Attach(0),
             pango.Attach(1),
-            -640.0 / 480.0,
+            -w / h,
         )
             .SetHandler(self.handler))
     def viewer_refresh(self, q):
-        darr = None
-        if darr is None or not q.empty():
-            darr = q.get(True)
+        if self.state is None or q.empty():
+            self.state = q.get()
+
+        # turn state into points
+        # ppts = np.array([d[:3, 3] for d in self.state[0]])
+        spts = np.array([d[:3] for d in self.state[1]])
+
 
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         gl.glClearColor(1.0, 1.0, 1.0, 1.0)
         self.dcam.Activate(self.scam)
-        gl.glPointSize(10)
+
+
         gl.glColor3f(0.0, 1.0, 0.0)
-        pango.glDrawPoints([d[:3, 1] for d in darr[0]])
+        for pose in self.state[0]:
+            pango.glDrawFrustum(Kinv, 2, 2, pose, 1)
 
         gl.glPointSize(2)
         gl.glColor3f(1.0, 0.0, 0.0)
-        pango.glDrawPoints([d[:3] for d in darr[1]])
+        pango.glDrawPoints(spts)
+        
         pango.FinishFrame()
-        # for d in darr[1]:
-            # pango.glDrawPoints(d, dtype=np.float64)
-        # pango.glDrawPoints(dtype=np.float64, data=(d for d in darr[1]))
-
-        # pango glDrawPoints
         
 
 
@@ -87,11 +98,10 @@ class Map(object):
         for p in self.points:
             pts.append(p.pt)
         self.q.put((poses, pts))
-        self.viewer_refresh(self.q)
 
 # main classes
-display = Display(W,H)
 mapp = Map()
+# display = Display(W,H)
 
 
     # for p in points:
@@ -150,10 +160,13 @@ def process_frame(img):
         u2,v2 = denormalize(K, pt2)
         cv2.circle(img, (u1, v1), color=(0,255,0),radius=3)
         cv2.line(img, (u1, v1), (u2,v2), color=(255,0,0))
-    display.show(img)
+    
+    # 2-D
+    # display.show(img)
     
     # 3-D
     mapp.display()
+    
 
 if __name__ == "__main__":
     cap = cv2.VideoCapture(videoFromDir)
