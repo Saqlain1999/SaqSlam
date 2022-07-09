@@ -33,11 +33,11 @@ class Map(object):
         self.points = []
         self.state = None
         self.q = Queue()
-        
         p = Process(target=self.viewer_thread, args=(self.q,))
         p.daemon = True
         p.start()
 
+    # Running Threads
     def viewer_thread(self, q):
         self.viewer_init(1024, 768)
         while 1:
@@ -81,7 +81,9 @@ class Map(object):
 
         gl.glColor3f(0.0, 1.0, 0.0)
         for pose in self.state[0]:
-            pango.glDrawFrustum(Kinv, 2, 2, pose, 1)
+            pango.glDrawFrustum(Kinv, 0, 0, pose, 1)
+
+        # pango.glDrawPoints([d[:3,3] for d in self.state[0]])
 
         gl.glPointSize(2)
         gl.glColor3f(1.0, 0.0, 0.0)
@@ -102,6 +104,7 @@ class Map(object):
 # main classes
 mapp = Map()
 # display = Display(W,H)
+display = None
 
 
     # for p in points:
@@ -162,7 +165,8 @@ def process_frame(img):
         cv2.line(img, (u1, v1), (u2,v2), color=(255,0,0))
     
     # 2-D
-    # display.show(img)
+    if display is not None:
+        display.show(img)
     
     # 3-D
     mapp.display()

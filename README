@@ -3,11 +3,11 @@
 A basic implementation of SLAM
 
 ## Uses
-* sdl2 to display video
+* sdl2 for 2-D display
 * cv2 for feature tracking and matching
 * g2opy for optimization
 * skimage for ransac and EssentialMatrixTransform
-
+* pypangolin for 3-D display
 
 ## To Run
 * Requires a video to run SLAM on, this implementaiton is just for learning this is a python based SLAM so it isn't efficient

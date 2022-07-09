@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from skimage.measure import ransac
-from skimage.transform import FundamentalMatrixTransform, EssentialMatrixTransform
+from skimage.transform import EssentialMatrixTransform
 np.set_printoptions(suppress=True)
 
 
@@ -83,7 +83,6 @@ def match_frames(f1,f2):
 
     # fit matrix
     model, inliers = ransac((ret[:, 0],ret[:, 1]),
-                            # FundamentalMatrixTransform,
                             EssentialMatrixTransform,
                             min_samples=8,
                             # residual_threshold=1,
