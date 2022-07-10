@@ -54,19 +54,26 @@ def process_frame(img):
     frame = Frame(mapp, img, K)
     if frame.id == 0:
         return
-
+    
+    # match with previous frame
     f1 = mapp.frames[-1]
     f2 = mapp.frames[-2]
     idx1, idx2, Rt = match_frames(f1, f2)
     f1.pose = np.dot(Rt, f2.pose)
-    
+
+
+    for i in range(len(f2.pts)):
+        if f2.pts[i] is not None:
+            f2.pts
+
     # homogenous 3-D coords
-    pts4d = triangulate(f1.pose, f2.pose, f1.pts[idx1], f2.pts[idx2])
+    pts4d = triangulate(f1.pose, f2.pose, f1.kps[idx1], f2.kps[idx2])
     pts4d /= pts4d[:, 3:]
     
     # reject pts without enough depth
     # reject pts behind the camera
-    good_pts4d = (np.abs(pts4d[:, 3]) > 0.005) & (pts4d[:, 2] > 0)
+    unmatched_points = np.array([f1.pts[i] is None for i in idx1]).astype(np.bool)
+    good_pts4d = (np.abs(pts4d[:, 3]) > 0.005) & (pts4d[:, 2] > 0) & unmatched_points
 
 
     for i,p in enumerate(pts4d):
@@ -78,7 +85,7 @@ def process_frame(img):
 
 
 
-    for pt1,pt2 in zip(f1.pts[idx1], f2.pts[idx2]):
+    for pt1,pt2 in zip(f1.kps[idx1], f2.kps[idx2]):
         u1,v1 = denormalize(K, pt1)
         u2,v2 = denormalize(K, pt2)
         cv2.circle(img, (u1, v1), color=(0,255,0),radius=3)
