@@ -11,4 +11,10 @@ A basic implementation of SLAM
 
 ## To Run
 * Requires a video to run SLAM on, this implementaiton is just for learning this is a python based SLAM so it isn't efficient
-* Just change the videoFromDir var in slam.py file, currently using a car driving video
+* Just provide it the video with runing slam.py file
+
+## Parameters (args)
+the script can be run with the following args: i.e F=300 D2D=1 D3D=1 ./slam.py videos/test_ohio.mp4
+* F=300 will set the focus length to 300 for the camera
+* D2D=1 will enable 2d Display
+* D3D=1 will enable 3d Display
