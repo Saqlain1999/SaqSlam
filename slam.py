@@ -11,7 +11,8 @@ import g2o
 from pointmap import Map, Point
 
 
-np.set_printoptions(suppress=True)
+# set this!
+F = int(os.getenv("F", "800"))
 
 # Creating a object of display class, it actually tas frames from video and makes it viewable using Sdl2
 
@@ -19,7 +20,6 @@ np.set_printoptions(suppress=True)
 # Camera
 W = 1920//2
 H = 1080//2
-F = 800
 K = np.array(([F,0,W//2],[0,F,H//2],[0,0,1]))
 Kinv = np.linalg.inv(K)
 
