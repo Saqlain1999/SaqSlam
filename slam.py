@@ -14,7 +14,7 @@ np.set_printoptions(suppress=True)
 
 
 # Video:
-videoFromDir = './video2.mp4'
+videoFromDir = './videos/test_ohio.mp4'
 
 # Creating a object of display class, it actually tas frames from video and makes it viewable using Sdl2
 
@@ -22,7 +22,7 @@ videoFromDir = './video2.mp4'
 # Camera
 W = 1920//2
 H = 1080//2
-F = 270
+F = 800
 K = np.array(([F,0,W//2],[0,F,H//2],[0,0,1]))
 Kinv = np.linalg.inv(K)
 

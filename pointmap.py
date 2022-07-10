@@ -26,7 +26,7 @@ class Map(object):
         gl.glEnable(gl.GL_DEPTH_TEST)
         
         self.scam = pango.OpenGlRenderState(
-            pango.ProjectionMatrix(w, h, 420, 420, w//2, h//2, 0.2, 1000),
+            pango.ProjectionMatrix(w, h, 420, 420, w//2, h//2, 0.2, 10000),
             pango.ModelViewLookAt(0, -5, -8,
                                   0, 0, 0,
                                   0, -1, 0))
