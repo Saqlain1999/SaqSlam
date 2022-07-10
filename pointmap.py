@@ -10,10 +10,13 @@ class Map(object):
         self.points = []
         self.Kinv = Kinv
         self.state = None
+        self.q = None
+
+    def create_viewer(self):
         self.q = Queue()
-        p = Process(target=self.viewer_thread, args=(self.q,))
-        p.daemon = True
-        p.start()
+        self.vp = Process(target=self.viewer_thread, args=(self.q,))
+        self.vp.daemon = True
+        self.vp.start()
 
     # Running Threads
     def viewer_thread(self, q):
@@ -72,6 +75,8 @@ class Map(object):
 
 
     def display(self):
+        if self.q is None:
+            return
         poses, pts = [], []
         for f in self.frames:
             poses.append(f.pose)

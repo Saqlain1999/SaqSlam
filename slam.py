@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import time
 import cv2
 import numpy as np
@@ -11,10 +12,6 @@ from pointmap import Map, Point
 
 
 np.set_printoptions(suppress=True)
-
-
-# Video:
-videoFromDir = './videos/test_ohio.mp4'
 
 # Creating a object of display class, it actually tas frames from video and makes it viewable using Sdl2
 
@@ -28,8 +25,15 @@ Kinv = np.linalg.inv(K)
 
 
 # main classes
-mapp = Map(Kinv)
-display = Display(W,H) if os.getenv("D2D") is not None else None
+mapp = Map(Kinv) 
+if os.getenv("D3D") is not None:
+    mapp.create_viewer()
+
+
+display = None
+if os.getenv("D2D") is not None:
+    display = Display(W,H) 
+
 
 def triangulate(pose1, pose2, pts1, pts2):
     ret = np.zeros((pts1.shape[0], 4))
@@ -89,7 +93,11 @@ def process_frame(img):
     
 
 if __name__ == "__main__":
-    cap = cv2.VideoCapture(videoFromDir)
+    if len(sys.argv) < 2:
+        print(f"{sys.argv[0]} <video.mp4>")
+        exit(-1)
+
+    cap = cv2.VideoCapture(sys.argv[1])
     while cap.isOpened():
         ret, frame = cap.read()
         if ret:
