@@ -2,12 +2,10 @@
 
 import os
 import sys
-import time
 import cv2
 import numpy as np
 from display import Display
-from frame import denormalize, Frame, match_frames, IRt
-import g2o
+from frame import denormalize, Frame, match_frames
 from pointmap import Map, Point
 
 
@@ -25,7 +23,7 @@ Kinv = np.linalg.inv(K)
 
 
 # main classes
-mapp = Map(Kinv) 
+mapp = Map(K) 
 if os.getenv("D3D") is not None:
     mapp.create_viewer()
 
@@ -54,6 +52,7 @@ def process_frame(img):
     frame = Frame(mapp, img, K)
     if frame.id == 0:
         return
+    print(f"\n*** frame {frame.id} ***")
     
     # match with previous frame
     f1 = mapp.frames[-1]
@@ -62,9 +61,9 @@ def process_frame(img):
     f1.pose = np.dot(Rt, f2.pose)
 
 
-    for i in range(len(f2.pts)):
-        if f2.pts[i] is not None:
-            f2.pts
+    for i,idx in enumerate(idx2):
+        if f2.pts[idx] is not None:
+            f2.pts[idx].add_observation(f1, idx1[i])
 
     # homogenous 3-D coords
     pts4d = triangulate(f1.pose, f2.pose, f1.kps[idx1], f2.kps[idx2])
@@ -72,7 +71,8 @@ def process_frame(img):
     
     # reject pts without enough depth
     # reject pts behind the camera
-    unmatched_points = np.array([f1.pts[i] is None for i in idx1]).astype(np.bool)
+    unmatched_points = np.array([f1.pts[i] is None for i in idx1])
+    print(f"Adding: {np.sum(unmatched_points)} points")
     good_pts4d = (np.abs(pts4d[:, 3]) > 0.005) & (pts4d[:, 2] > 0) & unmatched_points
 
 
@@ -94,6 +94,10 @@ def process_frame(img):
     # 2-D
     if display is not None:
         display.show(img)
+    
+    # Optimize the mapp
+    if frame.id >= 4:
+        mapp.optimize()
     
     # 3-D
     mapp.display()

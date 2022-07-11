@@ -1,17 +1,83 @@
-import pypangolin as pango
-import OpenGL.GL as gl 
 from multiprocessing import Process, Queue
 import numpy as np
-
-
+import pypangolin as pango
+import OpenGL.GL as gl 
+import g2o
+from frame import poseRt
 class Map(object):
-    def __init__(self, Kinv):
+    def __init__(self, K):
         self.frames = []
         self.points = []
-        self.Kinv = Kinv
+        self.K = K
+        self.Kinv = np.linalg.inv(K)
         self.state = None
         self.q = None
 
+    # Optimizer g2opy
+    def optimize(self):
+
+        # create g2o optimizer
+        opt = g2o.SparseOptimizer()
+        solver = g2o.BlockSolverSE3(g2o.LinearSolverCholmodSE3())
+        solver = g2o.OptimizationAlgorithmLevenberg(solver)
+        opt.set_algorithm(solver)
+        robust_kernel = g2o.RobustKernelHuber(np.sqrt(5.991))
+        
+
+        # add frames to graph
+        for f in self.frames:
+            pose = f.pose
+            # pose = np.linalg.inv(pose)
+            sbacam = g2o.SBACam(g2o.SE3Quat(pose[0:3, 0:3], pose[0:3, 3]))
+            sbacam.set_cam(1.0,1.0,0.0,0.0,1.0)
+            v_se3 = g2o.VertexCam()
+            v_se3.set_id(f.id)
+            v_se3.set_estimate(sbacam)
+            v_se3.set_fixed(f.id == 0)
+            opt.add_vertex(v_se3)
+
+
+        # add points to frames
+        PT_ID_OFFSET = 0x10000
+        for p in self.points:
+            pt = g2o.VertexSBAPointXYZ()
+            pt.set_id(p.id + PT_ID_OFFSET)
+            pt.set_estimate(p.pt[0:3])
+            pt.set_marginalized(True)
+            pt.set_fixed(False)
+            opt.add_vertex(pt)
+
+            for f in p.frames:
+                edge = g2o.EdgeProjectP2MC()
+                edge.set_vertex(0, pt)
+                edge.set_vertex(1, opt.vertex(f.id))
+                edge.set_measurement(f.kps[f.pts.index(p)])
+                edge.set_information(np.eye(2))
+                edge.set_robust_kernel(robust_kernel)
+                opt.add_edge(edge)
+
+        # Optimize                
+        opt.set_verbose(True)
+        opt.initialize_optimization()
+        # init g2o optimizer
+        opt.optimize(10)  
+
+        # put frames back
+        for f in self.frames:
+            est = opt.vertex(f.id).estimate()
+            R = est.rotation().matrix()
+            t = est.translation()
+            f.pose = poseRt(R, t)
+
+        # put edges back
+        for p in self.points:
+            est = opt.vertex(p.id + PT_ID_OFFSET).estimate()
+            p.pt = np.array(est)
+
+            # p.pt = est
+
+
+    # Viewer
     def create_viewer(self):
         self.q = Queue()
         self.vp = Process(target=self.viewer_thread, args=(self.q,))
