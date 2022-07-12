@@ -24,14 +24,7 @@ Kinv = np.linalg.inv(K)
 
 # main classes
 mapp = Map(K) 
-if os.getenv("D3D") is not None:
-    mapp.create_viewer()
-
-
 display = None
-if os.getenv("D2D") is not None:
-    display = Display(W,H) 
-
 
 def triangulate(pose1, pose2, pts1, pts2):
     ret = np.zeros((pts1.shape[0], 4))
@@ -99,8 +92,9 @@ def process_frame(img):
     
     # Optimize the mapp
     if frame.id >= 4:
-        mapp.optimize()
-    
+        err = mapp.optimize()
+        print(f"Optimize: {err} units of error")
+
     # 3-D
     mapp.display()
     
@@ -109,6 +103,10 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(f"{sys.argv[0]} <video.mp4>")
         exit(-1)
+    if os.getenv("D3D") is not None:
+        mapp.create_viewer()
+    if os.getenv("D2D") is not None:
+        display = Display(W,H) 
 
     cap = cv2.VideoCapture(sys.argv[1])
     while cap.isOpened():

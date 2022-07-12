@@ -4,10 +4,14 @@ import pypangolin as pango
 import OpenGL.GL as gl 
 import g2o
 from frame import poseRt
+
+LOCAL_WINDOW = 20
+
 class Map(object):
     def __init__(self, K):
         self.frames = []
         self.points = []
+        self.max_point = 0
         self.K = K
         self.Kinv = np.linalg.inv(K)
         self.state = None
@@ -21,26 +25,30 @@ class Map(object):
         solver = g2o.BlockSolverSE3(g2o.LinearSolverCholmodSE3())
         solver = g2o.OptimizationAlgorithmLevenberg(solver)
         opt.set_algorithm(solver)
+
         robust_kernel = g2o.RobustKernelHuber(np.sqrt(5.991))
         
+        local_frames = self.frames[-LOCAL_WINDOW:]
 
         # add frames to graph
         for f in self.frames:
             pose = f.pose
             # pose = np.linalg.inv(pose)
             sbacam = g2o.SBACam(g2o.SE3Quat(pose[0:3, 0:3], pose[0:3, 3]))
-            # sbacam.set_cam(1.0,1.0,0.0,0.0,1.0)
             sbacam.set_cam(f.K[0][0],f.K[1][1],f.K[0][2],f.K[1][2],1.0)
             v_se3 = g2o.VertexCam()
             v_se3.set_id(f.id)
             v_se3.set_estimate(sbacam)
-            v_se3.set_fixed(f.id <= 1)
+            v_se3.set_fixed(f.id <= 1 or f not in local_frames)
+            # v_se3.set_fixed(f.id == 0)
             opt.add_vertex(v_se3)
 
 
         # add points to frames
         PT_ID_OFFSET = 0x10000
         for p in self.points:
+            if not any([f in local_frames for f in p.frames]):
+                continue
             pt = g2o.VertexSBAPointXYZ()
             pt.set_id(p.id + PT_ID_OFFSET)
             pt.set_estimate(p.pt[0:3])
@@ -58,10 +66,10 @@ class Map(object):
                 opt.add_edge(edge)
 
         # Optimize                
-        opt.set_verbose(True)
+        # opt.set_verbose(True)
         opt.initialize_optimization()
         # init g2o optimizer
-        opt.optimize(50)  
+        opt.optimize(50) 
 
         # put frames back
         for f in self.frames:
@@ -70,13 +78,36 @@ class Map(object):
             t = est.translation()
             f.pose = poseRt(R, t)
 
-        # put edges back
+        # put points back (and cull)
+        new_points = []
         for p in self.points:
-            est = opt.vertex(p.id + PT_ID_OFFSET).estimate()
+            vert = opt.vertex(p.id + PT_ID_OFFSET)
+            if vert is None:
+                new_points.append(p)
+                continue
+            est = vert.estimate()
+
+            old_point = len(p.frames) == 2 and p.frames[-1] not in local_frames
+
+            # compute reprojection error
+            errs = []
+            for f in p.frames:
+                uv = f.kpus[f.pts.index(p)]
+                proj = np.dot(f.K, est)
+                proj = proj[0:2] / proj[2]
+                errs.append(np.linalg.norm(proj-uv))
+
+            # cull
+            if (old_point and np.mean(errs) > 30) or np.mean(errs) > 100:
+                p.delete()
+                continue
+            
             p.pt = np.array(est)
+            new_points.append(p)
 
-            # p.pt = est
+        self.points = new_points
 
+        return opt.chi2()
 
     # Viewer
     def create_viewer(self):
@@ -158,9 +189,14 @@ class Point(object):
         self.frames = []
         self.idxs = []
         self.color = np.copy(color)
-
-        self.id = len(mapp.points)
+        self.id = mapp.max_point
+        mapp.max_point += 1
         mapp.points.append(self)
+
+    def delete(self):
+        for f in self.frames:
+            f.pts[f.pts.index(self)] = None
+        del  self
 
     def add_observation(self, frame, idx):
         frame.pts[idx] = self

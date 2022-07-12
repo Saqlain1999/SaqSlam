@@ -18,3 +18,11 @@ the script can be run with the following args: i.e F=300 D2D=1 D3D=1 ./slam.py v
 * F=300 will set the focus length to 300 for the camera
 * D2D=1 will enable 2d Display
 * D3D=1 will enable 3d Display
+
+TODO:
+* Add Optimizer for F
+* Replace essential matrix for pose estimation once we have a track
+** Add kinematic model
+** Run g2o to only optimize the latest pose
+* Add search by projection o re-find old map points
+

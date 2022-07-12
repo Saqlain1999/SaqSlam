@@ -40,7 +40,7 @@ def extract(img):
     orb = cv2.ORB_create()
     
     # detection
-    pts = cv2.goodFeaturesToTrack(np.mean(img, axis=2).astype(np.uint8), 1000, 0.01, 7)
+    pts = cv2.goodFeaturesToTrack(np.mean(img, axis=2).astype(np.uint8), 3000, 0.01, 7)
     
     # extraction
     kps = [cv2.KeyPoint(x=f[0][0], y=f[0][1],size=20) for f in pts]
