@@ -1,6 +1,6 @@
 # ZlykhSLAM
 
-A basic implementation of SLAM
+A basic implementation of SLAM using python
 
 Libraries Used
 -----
