@@ -1,11 +1,12 @@
 from multiprocessing import Process, Queue
+from frame import poseRt
 import numpy as np
 import pypangolin as pango
 import OpenGL.GL as gl 
 import g2o
-from frame import poseRt
 
 LOCAL_WINDOW = 20
+#LOCAL_WINDOW = None
 
 class Map(object):
     def __init__(self, K):
@@ -28,7 +29,10 @@ class Map(object):
 
         robust_kernel = g2o.RobustKernelHuber(np.sqrt(5.991))
         
-        local_frames = self.frames[-LOCAL_WINDOW:]
+        if LOCAL_WINDOW is None:
+            local_window = self.frames
+        else:
+            local_frames = self.frames[-LOCAL_WINDOW:]
 
         # add frames to graph
         for f in self.frames:
@@ -98,9 +102,9 @@ class Map(object):
                 errs.append(np.linalg.norm(proj-uv))
 
             # cull
-            if (old_point and np.mean(errs) > 30) or np.mean(errs) > 100:
-                p.delete()
-                continue
+            # if (old_point and np.mean(errs) > 30) or np.mean(errs) > 100:
+            #     p.delete()
+            #     continue
             
             p.pt = np.array(est)
             new_points.append(p)

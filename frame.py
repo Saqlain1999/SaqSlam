@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 from skimage.measure import ransac
@@ -29,6 +30,8 @@ def extractRt(F):
     if np.sum(R.diagonal()) < 0:
         R = np.dot(np.dot(U,W.T), Vt)
     t = U[:,2]
+    if os.getenv('REVERSE') is not None:
+        t *= -1
     return poseRt(R, t)
   
     # Rt = np.concatenate([R,t.reshape(3,1)], axis=1)
