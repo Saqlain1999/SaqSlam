@@ -63,6 +63,7 @@ def process_frame(img):
 
     for i,idx in enumerate(idx2):
         if f2.pts[idx] is not None:
+        # if f2.pts[idx] is not None and f1.pts[idx1[i]] is None:
             f2.pts[idx].add_observation(f1, idx1[i])
 
     # homogenous 3-D coords
@@ -79,9 +80,10 @@ def process_frame(img):
     for i,p in enumerate(pts4d):
         if not good_pts4d[i]:
             continue
-        pt = Point(mapp, p)
-        pt.add_observation(f1, idx1[i])
+        color = img[int(round(f1.kpus[idx1[i],1])), int(round(f1.kpus[idx1[i],0]))]
+        pt = Point(mapp, p[0:3], color)
         pt.add_observation(f2, idx2[i])
+        pt.add_observation(f1, idx1[i])
 
 
 

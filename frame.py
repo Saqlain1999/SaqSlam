@@ -21,7 +21,8 @@ def poseRt(R, t):
 def extractRt(F):
     W = np.array([[0,-1,0],[1,0,0],[0,0,1]],dtype=float)
     U,d,Vt = np.linalg.svd(F)
-    assert np.linalg.det(U) > 0
+    if np.linalg.det(U) < 0:
+        U *= -1.0
     if np.linalg.det(Vt) < 0:
         Vt *= -1.0
     R = np.dot(np.dot(U, W), Vt)
@@ -107,8 +108,8 @@ class Frame(object):
         self.Kinv = np.linalg.inv(self.K)
         self.pose = np.eye(4)
         self.h, self.w = img.shape[0:2]
-        kps, self.des = extract(img)
-        self.kps = normalize(self.Kinv, kps)
+        self.kpus, self.des = extract(img)
+        self.kps = normalize(self.Kinv, self.kpus)
         self.pts = [None]*len(self.kps)
 
 

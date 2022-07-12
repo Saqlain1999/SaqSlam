@@ -29,11 +29,12 @@ class Map(object):
             pose = f.pose
             # pose = np.linalg.inv(pose)
             sbacam = g2o.SBACam(g2o.SE3Quat(pose[0:3, 0:3], pose[0:3, 3]))
-            sbacam.set_cam(1.0,1.0,0.0,0.0,1.0)
+            # sbacam.set_cam(1.0,1.0,0.0,0.0,1.0)
+            sbacam.set_cam(f.K[0][0],f.K[1][1],f.K[0][2],f.K[1][2],1.0)
             v_se3 = g2o.VertexCam()
             v_se3.set_id(f.id)
             v_se3.set_estimate(sbacam)
-            v_se3.set_fixed(f.id == 0)
+            v_se3.set_fixed(f.id <= 1)
             opt.add_vertex(v_se3)
 
 
@@ -51,7 +52,7 @@ class Map(object):
                 edge = g2o.EdgeProjectP2MC()
                 edge.set_vertex(0, pt)
                 edge.set_vertex(1, opt.vertex(f.id))
-                edge.set_measurement(f.kps[f.pts.index(p)])
+                edge.set_measurement(f.kpus[f.pts.index(p)])
                 edge.set_information(np.eye(2))
                 edge.set_robust_kernel(robust_kernel)
                 opt.add_edge(edge)
@@ -60,7 +61,7 @@ class Map(object):
         opt.set_verbose(True)
         opt.initialize_optimization()
         # init g2o optimizer
-        opt.optimize(10)  
+        opt.optimize(50)  
 
         # put frames back
         for f in self.frames:
@@ -96,7 +97,7 @@ class Map(object):
         
         self.scam = pango.OpenGlRenderState(
             pango.ProjectionMatrix(w, h, 420, 420, w//2, h//2, 0.2, 10000),
-            pango.ModelViewLookAt(0, -5, -8,
+            pango.ModelViewLookAt(0, -10, -8,
                                   0, 0, 0,
                                   0, -1, 0))
 
@@ -113,53 +114,51 @@ class Map(object):
         )
             .SetHandler(self.handler))
     def viewer_refresh(self, q):
-        if self.state is None or q.empty():
+        if self.state is None or not q.empty():
             self.state = q.get()
 
-        # turn state into points
-        # ppts = np.array([d[:3, 3] for d in self.state[0]])
-        spts = np.array([d[:3] for d in self.state[1]])
-
-
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-        gl.glClearColor(1.0, 1.0, 1.0, 1.0)
+        gl.glClearColor(0.0,0.0,0.0,1.0)
         self.dcam.Activate(self.scam)
 
-
+        # draw poses
         gl.glColor3f(0.0, 1.0, 0.0)
         for pose in self.state[0]:
-            pango.glDrawFrustum(self.Kinv, 0, 0, pose, 1)
+            pango.glDrawFrustum(self.Kinv, 1000, 1000, pose, 1)
 
-        # pango.glDrawPoints([d[:3,3] for d in self.state[0]])
-
-        gl.glPointSize(2)
-        gl.glColor3f(1.0, 0.0, 0.0)
-        pango.glDrawPoints(spts)
-        
+        # draw keypoints
+        gl.glPointSize(5)
+        gl.glColor3f(1.0,1.0,1.0)
+        pango.glDrawPoints(self.state[1])
+        pango.glDrawPoints(self.state[2])
+            
         pango.FinishFrame()
         
-
+ 
 
     def display(self):
         if self.q is None:
             return
-        poses, pts = [], []
+        poses, pts, colors = [], [], []
         for f in self.frames:
             poses.append(f.pose)
+            # poses.append(np.linalg.inv(f.pose))
         for p in self.points:
             pts.append(p.pt)
-        self.q.put((poses, pts))
+            colors.append(p.color)
+        self.q.put((poses, np.array(pts), np.array(colors)/256.0))
 
 
 class Point(object):
     # A point is a 3-D point in the world
     # Each point is observed in multiple Frames
 
-    def __init__(self, mapp, loc):
+    def __init__(self, mapp, loc, color):
         self.pt = loc
         self.frames = []
         self.idxs = []
-        
+        self.color = np.copy(color)
+
         self.id = len(mapp.points)
         mapp.points.append(self)
 
