@@ -2,6 +2,9 @@
 
 import os
 import sys
+
+sys.path.append("./lib")
+
 import cv2
 import numpy as np
 from display import Display
