@@ -97,7 +97,8 @@ class Map(object):
             errs = []
             for f in p.frames:
                 uv = f.kpus[f.pts.index(p)]
-                proj = np.dot(f.K, est)
+                proj = np.dot(np.dot(f.K, np.linalg.inv(f.pose)[:3]), 
+                                            np.array([est[0], est[1], est[2], 1.0]))
                 proj = proj[0:2] / proj[2]
                 errs.append(np.linalg.norm(proj-uv))
 
@@ -119,7 +120,6 @@ class Map(object):
         self.vp = Process(target=self.viewer_thread, args=(self.q,))
         self.vp.daemon = True
         self.vp.start()
-
     # Running Threads
     def viewer_thread(self, q):
         self.viewer_init(1024, 768)
@@ -148,25 +148,26 @@ class Map(object):
             -w / h,
         )
             .SetHandler(self.handler))
+        
     def viewer_refresh(self, q):
-        if self.state is None or not q.empty():
+        if not q.empty():
             self.state = q.get()
 
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         gl.glClearColor(0.0,0.0,0.0,1.0)
         self.dcam.Activate(self.scam)
 
-        # draw poses
-        gl.glColor3f(0.0, 1.0, 0.0)
-        for pose in self.state[0]:
-            pango.glDrawFrustum(self.Kinv, 1000, 1000, pose, 1)
+        if self.state is not None:
+            gl.glColor3f(0.0, 1.0, 0.0)
+            for pose in self.state[0]:
+                pango.glDrawFrustum(self.Kinv, 1000, 1000, pose, 1)
 
-        # draw keypoints
-        gl.glPointSize(5)
-        gl.glColor3f(1.0,1.0,1.0)
-        pango.glDrawPoints(self.state[1])
-        pango.glDrawPoints(self.state[2])
-            
+            # draw keypoints
+            gl.glPointSize(5)
+            gl.glColor3f(1.0,1.0,1.0)
+            pango.glDrawPoints(self.state[1])
+            # pango.glDrawPoints(self.state[2])
+        
         pango.FinishFrame()
         
  
