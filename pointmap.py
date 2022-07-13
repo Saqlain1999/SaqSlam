@@ -158,16 +158,30 @@ class Map(object):
         self.dcam.Activate(self.scam)
 
         if self.state is not None:
-            gl.glColor3f(0.0, 1.0, 0.0)
-            for pose in self.state[0]:
-                pango.glDrawFrustum(self.Kinv, 1000, 1000, pose, 1)
+            # for pose in self.state[0]:
+            #     pango.glDrawFrustum(self.Kinv, 1000, 1000, pose, 1)
 
-            # draw keypoints
-            gl.glPointSize(5)
-            gl.glColor3f(1.0,1.0,1.0)
-            pango.glDrawPoints(self.state[1])
+            # draw points
+            # for i, s in enumerate(self.state[1]):
+            # for i in np.arange(len(self.state[1])):
+            gl.glColor3f(0.0, 1.0, 0.0)
+            for i in np.arange(len(self.state[0])):
+                pango.glDrawFrustum(self.Kinv, 1000, 1000, self.state[0][i], 1)
+            for i in self.state[3]:
+                gl.glPointSize(2)
+                gl.glColor3f(*self.state[2][i])
+                pango.glDrawPoints([self.state[1][i]])
+
+            
+                # pango.glDrawCircle(s[1:3], 0.1)
+            # gl.glColor3f(1.0,1.0,1.0)
+            # gl.glColor(0.0, 1.0, 1.0)
+            # pango.(self.state[1])
+            # pango.GlBufferData(gl.GL_ARRAY_BUFFER, len(self.state[1]), self.state[1], gl.GL_STATIC_DRAW);
+            # pango.RenderVboCbo(self.state[1], self.state[2])
             # pango.glDrawPoints(self.state[2])
-        
+
+
         pango.FinishFrame()
         
  
@@ -175,14 +189,15 @@ class Map(object):
     def display(self):
         if self.q is None:
             return
-        poses, pts, colors = [], [], []
+        poses, pts, colors, idxs = [], [], [], []
         for f in self.frames:
             poses.append(f.pose)
             # poses.append(np.linalg.inv(f.pose))
         for p in self.points:
             pts.append(p.pt)
             colors.append(p.color)
-        self.q.put((poses, np.array(pts), np.array(colors)/256.0))
+            idxs.append(p.id)
+        self.q.put((poses, np.array(pts), np.array(colors)/256.0, idxs))
 
 
 class Point(object):
