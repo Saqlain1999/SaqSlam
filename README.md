@@ -36,6 +36,7 @@ REVERSE=1 F=270 D3D=1 D2D=1 ./slam.py videos/test_countryroad_reversed.mp4
 TODO
 -----
 
+* BUGFIX: Turning doesn't work well
 * Add Optimizer for F
 * Replace essential matrix for pose estimation once we have a track
  * Add kinematic model

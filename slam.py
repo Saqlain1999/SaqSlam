@@ -19,8 +19,7 @@ F = int(os.getenv("F", "800"))
 
 # Feature Extractor Class returns good features to track using cv2.ORB, it's method extract takes image as a parameter (the same one from display class)
 # Camera
-W = 1920//2
-H = 1080//2
+W, H = 1242, 375
 K = np.array(([F,0,W//2],[0,F,H//2],[0,0,1]))
 Kinv = np.linalg.inv(K)
 
@@ -44,6 +43,9 @@ def triangulate(pose1, pose2, pts1, pts2):
     return ret
 
 def process_frame(img):
+    # (h, w) = img.shape[:2]
+    # r = H/float(h)
+    # dim = (int(w*r), H)
     img = cv2.resize(img, (W,H))
     frame = Frame(mapp, img, K)
     if frame.id == 0:

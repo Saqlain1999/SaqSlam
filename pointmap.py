@@ -167,14 +167,10 @@ class Map(object):
             gl.glColor3f(0.0, 1.0, 0.0)
             gl.glPointSize(3)
             for i in np.arange(len(self.state[0])):
-                print("Rendering Frustum")
                 pango.glDrawFrustum(self.Kinv, 1000, 1000, self.state[0][i], 1)
-                print("Frustum Rendered")
             for i in self.state[3]:
-                print("Rendering Points")
                 gl.glColor3f(*self.state[2][i])
                 pango.glDrawPoints([self.state[1][i]])
-                print("Points Rendered")
 
             
                 # pango.glDrawCircle(s[1:3], 0.1)
