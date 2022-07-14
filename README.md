@@ -32,6 +32,10 @@ export F=270        # Focal Length (in pixels)
 ```
 REVERSE=1 F=270 D3D=1 D2D=1 ./slam.py videos/test_countryroad_reversed.mp4
 ```
+OR
+```
+REVERSE=1 F=984 D3D=1 D2D=1 ./slam.py videos/test_kitti984_reverse.mp4
+```
 
 TODO
 -----
