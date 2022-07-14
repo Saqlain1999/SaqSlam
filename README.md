@@ -16,20 +16,22 @@ To Run
 
 * Requires a video to run SLAM on, this implementaiton is just for learning this is a python based SLAM so it isn't efficient
 * Just provide it the video with runing slam.py file
-
-```
-REVERSE=1 F=270 D2D=1 D3D=1 ./slam.py <video.mp4>
-```
-
-
-Parameters (args)
+  
+Usage
 -----
+```
+export D2D=1        # 2-D viewer
+export D3D=1        # 3-D viewer
+export REVERSE=1    # Reverse Video
+export F=270        # Focal Length (in pixels)
 
-the script can be run with the following args: i.e F=300 D2D=1 D3D=1 ./slam.py videos/test_ohio.mp4
-* F=300 will set the focus length to 300 for the camera
-* D2D=1 will enable 2d Display
-* D3D=1 will enable 3d Display
-* REVERSE=1 will enable reverse mode (the video provided must be reversed too)
+./slam.py <video.mp4>
+```
+### Example
+
+```
+REVERSE=1 F=270 D3D=1 D2D=1 ./slam.py videos/test_countryroad_reversed.mp4
+```
 
 TODO
 -----
