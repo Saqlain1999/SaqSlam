@@ -12,26 +12,15 @@ from frame import denormalize, Frame, match_frames
 from pointmap import Map, Point
 
 
-# set this!
-F = int(os.getenv("F", "800"))
 
-# Creating a object of display class, it actually tas frames from video and makes it viewable using Sdl2
-
-# Feature Extractor Class returns good features to track using cv2.ORB, it's method extract takes image as a parameter (the same one from display class)
-# Camera
-W, H = 1242, 375
-K = np.array(([F,0,W//2],[0,F,H//2],[0,0,1]))
-Kinv = np.linalg.inv(K)
 
 
 # main classes
-mapp = Map(K) 
+mapp = None
 display = None
 
 def triangulate(pose1, pose2, pts1, pts2):
     ret = np.zeros((pts1.shape[0], 4))
-    pose1 = np.linalg.inv(pose1)
-    pose2 = np.linalg.inv(pose2)
     for i, p in enumerate(zip(pts1, pts2)):
         A = np.zeros((4,4))
         A[0] = p[0][0]*pose1[2] - pose1[0]
@@ -47,6 +36,7 @@ def process_frame(img):
     # r = H/float(h)
     # dim = (int(w*r), H)
     img = cv2.resize(img, (W,H))
+    print("In process Frame", W, H, K)
     frame = Frame(mapp, img, K)
     if frame.id == 0:
         return
@@ -68,16 +58,19 @@ def process_frame(img):
 
     # locally in front of camera
     # reject pts without enough depth
-    pts_tri_local = triangulate(Rt, np.eye(4), f1.kps[idx1], f2.kps[idx2])
-    good_pts4d &= np.abs(pts_tri_local[:, 3]) > 0.005
+    # pts_tri_local = triangulate(Rt, np.eye(4), f1.kps[idx1], f2.kps[idx2])
+    # good_pts4d &= np.abs(pts_tri_local[:, 3]) > 0.005
+
+    pts4d = triangulate(f1.pose, f2.pose, f1.kps[idx1], f2.kps[idx2])
+    good_pts4d &= np.abs(pts4d[:, 3]) > 0.005
 
     # homogenous 3-D coords
     # reject pts behind the camera
-    pts_tri_local /= pts_tri_local[:, 3:]
-    good_pts4d &= pts_tri_local[:, 2] > 0
+    pts4d /= pts4d[:, 3:]
+    # good_pts4d &= pts_tri_local[:, 2] > 0
 
     # project into world
-    pts4d = np.dot(np.linalg.inv(f1.pose), pts_tri_local.T).T
+    # pts4d = np.dot(f1.pose, pts_tri_local.T).T
     
     
     # good_pts4d &= pts4d_lp[:, 2] > 0
@@ -117,12 +110,29 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(f"{sys.argv[0]} <video.mp4>")
         exit(-1)
+    
+    
+    cap = cv2.VideoCapture(sys.argv[1])
+
+    # Creating a object of display class, it actually tas frames from video and makes it viewable using Sdl2
+
+    # Feature Extractor Class returns good features to track using cv2.ORB, it's method extract takes image as a parameter (the same one from display class)
+    
+    # Camera Intrinsics Matrix
+    W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    F = int(os.getenv("F", "525"))
+    K = np.array(([F,0,W//2],[0,F,H//2],[0,0,1]))
+    Kinv = np.linalg.inv(K)
+    mapp = Map(K, Kinv)
+
     if os.getenv("D3D") is not None:
         mapp.create_viewer()
+
     if os.getenv("D2D") is not None:
         display = Display(W,H) 
 
-    cap = cv2.VideoCapture(sys.argv[1])
     while cap.isOpened():
         ret, frame = cap.read()
         if ret:

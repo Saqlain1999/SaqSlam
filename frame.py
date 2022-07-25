@@ -32,7 +32,7 @@ def extractRt(F):
     t = U[:,2]
     if os.getenv('REVERSE') is not None:
         t *= -1
-    return poseRt(R, t)
+    return np.linalg.inv(poseRt(R, t))
   
     # Rt = np.concatenate([R,t.reshape(3,1)], axis=1)
     # return Rt

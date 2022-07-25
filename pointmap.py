@@ -9,12 +9,12 @@ LOCAL_WINDOW = 20
 #LOCAL_WINDOW = None
 
 class Map(object):
-    def __init__(self, K):
+    def __init__(self, K, Kinv):
         self.frames = []
         self.points = []
         self.max_point = 0
         self.K = K
-        self.Kinv = np.linalg.inv(K)
+        self.Kinv = Kinv
         self.state = None
         self.q = None
 
@@ -36,7 +36,7 @@ class Map(object):
 
         # add frames to graph
         for f in self.frames:
-            pose = f.pose
+            pose = np.linalg.inv(f.pose)
             # pose = np.linalg.inv(pose)
             sbacam = g2o.SBACam(g2o.SE3Quat(pose[0:3, 0:3], pose[0:3, 3]))
             sbacam.set_cam(f.K[0][0],f.K[1][1],f.K[0][2],f.K[1][2],1.0)
@@ -80,7 +80,7 @@ class Map(object):
             est = opt.vertex(f.id).estimate()
             R = est.rotation().matrix()
             t = est.translation()
-            f.pose = poseRt(R, t)
+            f.pose = np.linalg.inv(poseRt(R, t))
 
         # put points back (and cull)
         new_points = []
@@ -97,7 +97,7 @@ class Map(object):
             errs = []
             for f in p.frames:
                 uv = f.kpus[f.pts.index(p)]
-                proj = np.dot(np.dot(f.K, np.linalg.inv(f.pose)[:3]), 
+                proj = np.dot(np.dot(f.K, f.pose[:3]), 
                                             np.array([est[0], est[1], est[2], 1.0]))
                 proj = proj[0:2] / proj[2]
                 errs.append(np.linalg.norm(proj-uv))
@@ -120,6 +120,7 @@ class Map(object):
         self.vp = Process(target=self.viewer_thread, args=(self.q,))
         self.vp.daemon = True
         self.vp.start()
+        
     # Running Threads
     def viewer_thread(self, q):
         self.viewer_init(1024, 768)
@@ -131,7 +132,7 @@ class Map(object):
         gl.glEnable(gl.GL_DEPTH_TEST)
         
         self.scam = pango.OpenGlRenderState(
-            pango.ProjectionMatrix(w, h, 420, 420, w//2, h//2, 0.2, 10000),
+            pango.ProjectionMatrix(w, h, 420, 420, w//2, h//2, 0.2, 1000),
             pango.ModelViewLookAt(0, -10, -8,
                                   0, 0, 0,
                                   0, -1, 0))
@@ -191,7 +192,7 @@ class Map(object):
             return
         poses, pts, colors, idxs = [], [], [], []
         for f in self.frames:
-            poses.append(f.pose)
+            poses.append(np.linalg.inv(f.pose))
             # poses.append(np.linalg.inv(f.pose))
         for p in self.points:
             pts.append(p.pt)
